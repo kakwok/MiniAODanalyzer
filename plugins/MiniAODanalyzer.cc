@@ -36,6 +36,7 @@
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
@@ -43,6 +44,9 @@
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
+
+#include "DataFormats/Candidate/interface/Candidate.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 
 #include "DataFormats/JetReco/interface/JetID.h"
 
@@ -81,8 +85,10 @@ class MiniAODanalyzer : public EDAnalyzer  {
       void createHistograms();
 
       bool DEBUG;
-      edm::EDGetTokenT<TriggerResults>          triggerToken_;
-      edm::EDGetTokenT<edm::View<pat::Jet> >        jetToken_;
+      edm::EDGetTokenT<TriggerResults>                       triggerToken_;
+      edm::EDGetTokenT<edm::View<pat::Jet> >                     jetToken_;
+      edm::EDGetTokenT<edm::View<reco::GenParticle> >      prunedGenToken_;
+      edm::EDGetTokenT<edm::View<pat::PackedGenParticle> > packedGenToken_;
 
       TTree* tree;
       std::vector< std::map<std::string,TH1*> > histos_;
@@ -122,6 +128,8 @@ MiniAODanalyzer::MiniAODanalyzer(const edm::ParameterSet& iConfig):
 {
     triggerToken_             = consumes<TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerTag"));
     jetToken_                 = mayConsume<edm::View<pat::Jet> >(iConfig.getParameter<edm::InputTag>("jetTag"));
+    prunedGenToken_           = consumes<edm::View<reco::GenParticle> >(iConfig.getParameter<edm::InputTag>("prunedGenParticles"));
+    packedGenToken_           = consumes<edm::View<pat::PackedGenParticle> >(iConfig.getParameter<edm::InputTag>("packedGenParticles"));
     cout <<" Constructin analyzer"<<endl;
 }
 
@@ -164,6 +172,8 @@ void MiniAODanalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
 {
     clear();
     using namespace edm;
+    using namespace reco;
+    using namespace pat;
 	TriggerResults tr;
     Handle<TriggerResults> h_trigRes;
 	iEvent.getByToken(triggerToken_, h_trigRes);
@@ -174,11 +184,41 @@ void MiniAODanalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     iEvent.getByToken(jetToken_,jetHandle);
     const edm::View<pat::Jet> & jets = *jetHandle;
 
+    // Pruned particles are the one containing "important" stuff
+    Handle<edm::View<reco::GenParticle> > prunedGensHandle;
+    iEvent.getByToken(prunedGenToken_,prunedGensHandle);
+    const edm::View<reco::GenParticle> & prunedGens = *prunedGensHandle;
+
+    // Packed particles are all the status 1, so usable to remake jets
+    // The navigation from status 1 to pruned is possible (the other direction should be made by hand)
+    Handle<edm::View<pat::PackedGenParticle> > packed;
+    iEvent.getByToken(packedGenToken_,packed);
+
     //Lorentz vectors for jets, egamma, muons, leptons, and all objects
     math::XYZTLorentzVectorF pJet;
 
     std::map<std::string,TH1*>& histo = histos_[0];
     double bosonPT=FindBosonPT(jets);
+    histo["bosonPT"]->Fill(bosonPT);
+
+
+    int gencnt=0;
+    double genPt =0;
+    //Look for the Higgs/Phi gen pT
+    for(edm::View<reco::GenParticle>::const_iterator gen = prunedGens.begin(); gen!=prunedGens.end(); ++gen){
+        gencnt++;
+        if(DEBUG){
+            cout <<" gen["<<gencnt<<"]   | pdgID = " << gen->pdgId() << "  |  pT = " << gen->pt() <<"  |   status = " << gen->status()<<endl;
+        }
+        // This will pick up the last status of the particle
+        if(gen->pdgId()==9900032){
+            genPt= gen->pt();
+        }
+    }
+    if(DEBUG){
+       cout <<" Final genPT of this event is "<< genPt <<endl;
+    }
+    histo["genPT"]->Fill(genPt);
 
     Service<service::TriggerNamesService> tns;
     bool foundNames = tns->getTrigPaths(*h_trigRes, triggerList);
@@ -339,6 +379,8 @@ void MiniAODanalyzer::createHistograms(){
     container["bbPT_C100_p014_offline"] = subDir.make<TH1F>("bbPT_C100_p014_offline", "bbPT_C100_p014_offline", 200, 0, 2000);
     container["bbPT_C172_p026_offline"] = subDir.make<TH1F>("bbPT_C172_p026_offline", "bbPT_C172_p026_offline", 200, 0, 2000);
     container["bbPT_C112_p014_offline"] = subDir.make<TH1F>("bbPT_C112_p014_offline", "bbPT_C112_p014_offline", 200, 0, 2000);
+    container["bosonPT"]                = subDir.make<TH1F>("bosonPT", "bosonPT", 200, 0, 2000);
+    container["genPT"]                  = subDir.make<TH1F>("genPT"  , "genPT"  , 200, 0, 2000);
     container["OfflineBtag"]            = subDir.make<TH1F>("OfflineBtag", "OfflineBtag", 4, 0, 4);
     container["OnlineBtag"]             = subDir.make<TH1F>("OnlineBtag" , "OnlineBtag" , 4, 0, 4);
     
