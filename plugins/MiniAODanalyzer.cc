@@ -227,30 +227,54 @@ void MiniAODanalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
 		 std::cout << "ERROR: length of names and paths not the same: "   << triggerList.size() << "," << tr.size() << endl;
 	}
 	// dump trigger list at first event
+	bool fired_C100_p014=false;
+	bool fired_C112_p014=false;
+	bool fired_C160_p026=false;
+	bool fired_C172_p026=false;
     for (unsigned int i=0; i< tr.size(); i++) {
 	    //std::cout << "["<<i<<"] = " << triggerList[i]<<setw(40) << ": " << (tr[i].accept() ? "Event Passed" : "Event Failed") << endl;
 	    if ( !tr[i].accept() == 1 ) continue;
             if( triggerList[i].find("HLT_DoubleJetsC100_DoubleBTagCSV_p026_DoublePFJetsC160")!=std::string::npos          ){
               if(DEBUG){       std::cout<<triggerList[i]<< " = Passed"<<std::endl;}
+                fired_C160_p026 = true;
                 histo["bbPT_C160_p026_online"]->Fill(bosonPT);
+                histo["bbPT_C160_p026_online_genPt"]->Fill(genPt);
                 histo["OnlineBtag"]->Fill("DoublePFJetsC160_p026",1);
             }
             if( triggerList[i].find("HLT_DoubleJetsC100_DoubleBTagCSV_p014_DoublePFJetsC100MaxDeta1p6")!=std::string::npos){
               if(DEBUG){       std::cout<<triggerList[i]<< " = Passed"<<std::endl;}
+                fired_C100_p014 = true;
                 histo["bbPT_C100_p014_online"]->Fill(bosonPT);
+                histo["bbPT_C100_p014_online_genPt"]->Fill(genPt);
                 histo["OnlineBtag"]->Fill("DoublePFJetsC100_p014",1);
             }
             if( triggerList[i].find("HLT_DoubleJetsC112_DoubleBTagCSV_p026_DoublePFJetsC172")!=std::string::npos          ){
               if(DEBUG){       std::cout<<triggerList[i]<< " = Passed"<<std::endl;}
+                fired_C172_p026 = true;
                 histo["bbPT_C172_p026_online"]->Fill(bosonPT);
+                histo["bbPT_C172_p026_online_genPt"]->Fill(genPt);
                 histo["OnlineBtag"]->Fill("DoublePFJetsC172_p026",1);
             }
             if( triggerList[i].find("HLT_DoubleJetsC112_DoubleBTagCSV_p014_DoublePFJetsC112MaxDeta1p6")!=std::string::npos){
               if(DEBUG){       std::cout<<triggerList[i]<< " = Passed"<<std::endl;}
+                fired_C112_p014 = true;
                 histo["bbPT_C112_p014_online"]->Fill(bosonPT);
+                histo["bbPT_C112_p014_online_genPt"]->Fill(genPt);
                 histo["OnlineBtag"]->Fill("DoublePFJetsC112_p014",1);
             }
 	}
+    if( fired_C160_p026 || fired_C172_p026 || fired_C112_p014 || fired_C100_p014){
+        histo["bbPT_C100|C112|C160|C172"]->Fill(genPt);
+    }
+    if( fired_C160_p026 || fired_C172_p026){
+        histo["bbPT_C160_OR_C172"]->Fill(genPt);
+    }
+    if( fired_C100_p014 || fired_C112_p014){
+        histo["bbPT_C100_OR_C112"]->Fill(genPt);
+    }
+   if( fired_C100_p014 || fired_C160_p026){
+        histo["bbPT_C100_OR_C160"]->Fill(genPt);
+    }
     
 
     int jetcnt=0;
@@ -375,10 +399,20 @@ void MiniAODanalyzer::createHistograms(){
     container["bbPT_C100_p014_online"] =  subDir.make<TH1F>("bbPT_C100_p014_online", "bbPT_C100_p014_online", 200, 0, 2000);
     container["bbPT_C172_p026_online"] =  subDir.make<TH1F>("bbPT_C172_p026_online", "bbPT_C172_p026_online", 200, 0, 2000);
     container["bbPT_C112_p014_online"] =  subDir.make<TH1F>("bbPT_C112_p014_online", "bbPT_C112_p014_online", 200, 0, 2000);
+
+    container["bbPT_C160_p026_online_genPt"] =  subDir.make<TH1F>("bbPT_C160_p026_online_genPt", "bbPT_C160_p026_online_genPt", 200, 0, 2000);
+    container["bbPT_C100_p014_online_genPt"] =  subDir.make<TH1F>("bbPT_C100_p014_online_genPt", "bbPT_C100_p014_online_genPt", 200, 0, 2000);
+    container["bbPT_C172_p026_online_genPt"] =  subDir.make<TH1F>("bbPT_C172_p026_online_genPt", "bbPT_C172_p026_online_genPt", 200, 0, 2000);
+    container["bbPT_C112_p014_online_genPt"] =  subDir.make<TH1F>("bbPT_C112_p014_online_genPt", "bbPT_C112_p014_online_genPt", 200, 0, 2000);
+
     container["bbPT_C160_p026_offline"] = subDir.make<TH1F>("bbPT_C160_p026_offline", "bbPT_C160_p026_offline", 200, 0, 2000);
     container["bbPT_C100_p014_offline"] = subDir.make<TH1F>("bbPT_C100_p014_offline", "bbPT_C100_p014_offline", 200, 0, 2000);
     container["bbPT_C172_p026_offline"] = subDir.make<TH1F>("bbPT_C172_p026_offline", "bbPT_C172_p026_offline", 200, 0, 2000);
     container["bbPT_C112_p014_offline"] = subDir.make<TH1F>("bbPT_C112_p014_offline", "bbPT_C112_p014_offline", 200, 0, 2000);
+    container["bbPT_C100_OR_C112"]      = subDir.make<TH1F>("bbPT_C100_OR_C112", "bbPT_C100_OR_C112", 200, 0, 2000);
+    container["bbPT_C160_OR_C172"]      = subDir.make<TH1F>("bbPT_C160_OR_C172", "bbPT_C160_OR_C172", 200, 0, 2000);
+    container["bbPT_C100_OR_C160"]      = subDir.make<TH1F>("bbPT_C100_OR_C160", "bbPT_C100_OR_C160", 200, 0, 2000);
+    container["bbPT_C100|C112|C160|C172"]      = subDir.make<TH1F>("bbPT_C100|C112|C160|C172", "bbPT_C100|C112|C160|C172", 200, 0, 2000);
     container["bosonPT"]                = subDir.make<TH1F>("bosonPT", "bosonPT", 200, 0, 2000);
     container["genPT"]                  = subDir.make<TH1F>("genPT"  , "genPT"  , 200, 0, 2000);
     container["OfflineBtag"]            = subDir.make<TH1F>("OfflineBtag", "OfflineBtag", 4, 0, 4);
