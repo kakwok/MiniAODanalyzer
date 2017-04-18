@@ -7,7 +7,6 @@ process = cms.Process("HLTMiniAOD")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.load('Configuration.StandardSequences.Services_cff')
 process.MessageLogger.destinations = ['cout', 'cerr']
-process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 #------------------------------------------------------------------------------------
 # Options
@@ -30,7 +29,16 @@ options.register('maxEvent',
                 VarParsing.VarParsing.multiplicity.singleton,
                 VarParsing.VarParsing.varType.int,
                 "max event to process")
-
+options.register('reportEvery',
+                1,
+                VarParsing.VarParsing.multiplicity.singleton,
+                VarParsing.VarParsing.varType.int,
+                "Report every N events for cout/cerr")
+options.register('debug',
+                False,
+                VarParsing.VarParsing.multiplicity.singleton,
+                VarParsing.VarParsing.varType.bool,
+                "Print debug info")
 
 options.parseArguments()
 
@@ -44,7 +52,9 @@ outputFile = options.outputFile
 
 print " Going to use input    = %s" % inputFile
 print " Going to write output = %s" % outputFile
+print " Debug mode            = %s" % options.debug
 
+process.MessageLogger.cerr.FwkReport.reportEvery = options.reportEvery
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(options.maxEvent) )
 
 
@@ -57,9 +67,11 @@ process.TFileService=cms.Service("TFileService",
         closeFileFast = cms.untracked.bool(True)
 )
 process.mini = cms.EDAnalyzer('MiniAODanalyzer',
-  triggerTag = cms.InputTag("TriggerResults","","HLT"),
-  jetTag =  cms.InputTag("slimmedJets"),
-  DEBUG = cms.untracked.bool(False)
+  triggerTag             = cms.InputTag("TriggerResults","","HLT"),
+  jetTag                 = cms.InputTag("slimmedJets"),
+  prunedGenParticles     = cms.InputTag("prunedGenParticles"),
+  packedGenParticles     = cms.InputTag("packedGenParticles"),
+  DEBUG = cms.untracked.bool(options.debug)
 )
 
 
