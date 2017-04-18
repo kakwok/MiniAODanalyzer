@@ -5,6 +5,8 @@ Simple, standalone miniAOD analyzer
 ```
 cmsrel CMSSW_8_0_26_patch1
 cd CMSSW_8_0_26_patch1/src
+mkdir bbtoDijet
+cd bbtoDijet
 git clone https://github.com/kakwok/MiniAODanalyzer.git
 cd MiniAODanalyzer
 scram b -j8
